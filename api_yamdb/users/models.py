@@ -16,17 +16,14 @@ class User(AbstractUser):
 
     email = models.EmailField(
         verbose_name='Адрес электронной почты',
+        max_length=254,
         unique=True,
     )
     username = models.CharField(
         verbose_name='Имя пользователя (логин)',
         max_length=150,
-        null=True,
         unique=True,
-        validators=[RegexValidator(
-            regex=r'^[\w.@+-]+$',
-            message='Имя пользователя использует недопустимый символ'
-        )]
+        validators=([RegexValidator(regex=r'^[\w.@+-]+$')]),
     )
     first_name = models.CharField(
         max_length=150,

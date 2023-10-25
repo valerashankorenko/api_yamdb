@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
+# from rest_framework.validators import UniqueValidator
 
 from .models import User
 
@@ -20,18 +20,6 @@ class UserSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели - User.
     """
-    username = serializers.CharField(
-        validators=[
-            UniqueValidator(queryset=User.objects.all())
-        ],
-        required=True,
-    )
-    email = serializers.EmailField(
-        validators=[
-            UniqueValidator(queryset=User.objects.all())
-        ]
-    )
-
     class Meta:
         model = User
         fields = (
@@ -52,30 +40,30 @@ class UserEditSerializer(serializers.ModelSerializer):
         read_only_fields = ('role',)
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+class UserRegisterSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели - User.
     Для регистрации новых пользователей.
     """
-    """
-    username = serializers.CharField(
-        validators=(
-            UniqueValidator(queryset=User.objects.all()),
-        )
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]+$',
+        max_length=150,
+        required=True
     )
     email = serializers.EmailField(
-        validators=(
-            UniqueValidator(queryset=User.objects.all()),
-        )
+        max_length=254,
+        required=True,
     )
 
     def validate_username(self, value):
         if value.lower() == 'me':
             raise serializers.ValidationError(
-                'Имя пользователя "me" не допустимо.'
+                'Использовать имя me запрещено'
             )
         return value
-    """
+
     class Meta:
-        fields = ('username', 'email')
         model = User
+        fields = (
+            'username', 'email'
+        )

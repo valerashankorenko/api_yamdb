@@ -1,7 +1,8 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
-from rest_framework import mixins, permissions, status, viewsets
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
@@ -11,7 +12,7 @@ from .permissions import (
     IsAdmin,
 )
 from .serializers import (
-    TokenSerializer, UserEditSerializer, RegisterSerializer, UserSerializer
+    TokenSerializer, UserEditSerializer, UserRegisterSerializer, UserSerializer
 )
 
 
@@ -24,23 +25,20 @@ class UserViewSet(
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
-    lookup_field = 'username'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
 
     @action(
-        methods=['get', 'patch'],
+        methods=['get', 'patch', 'delete'],
         detail=False,
-        url_path='me',
-        permission_classes=(permissions.IsAuthenticated),
-        serializer_class=UserEditSerializer,
+        url_path=r'(?P<username>[\w.@+-]+)',
+        serializer_class=UserSerializer,
     )
-    def get_own_profile(self, request):
-        """Получение пользоветелем данных о себе и их редактирование."""
-        user = request.user
-        if request.method == 'GET':
-            serializer = self.get_serializer(user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_user_profile(self, request, username):
+        """Получение данных о пользователе и их редактирование."""
+        user = get_object_or_404(User, username=username)
         if request.method == 'PATCH':
-            serializer = self.get_serializer(
+            serializer = UserSerializer(
                 user,
                 data=request.data,
                 partial=True
@@ -48,7 +46,30 @@ class UserViewSet(
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+        elif request.method == 'DELETE':
+            user.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = UserSerializer(user)
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @action(
+        methods=['get', 'patch'],
+        detail=False,
+        url_path='me',
+        permission_classes=(permissions.IsAuthenticated,),
+    )
+    def get_own_profile(self, request):
+        """Получение пользоветелем данных о себе и их редактирование."""
+        if request.method == 'PATCH':
+            serializer = UserSerializer(
+                request.user,
+                data=request.data,
+                partial=True,
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class RegisterViewSet(
@@ -58,7 +79,7 @@ class RegisterViewSet(
     Вьюсет для для регистрация новых пользователей.
     """
     queryset = User.objects.all()
-    serializer_class = RegisterSerializer
+    serializer_class = UserRegisterSerializer
     permission_classes = (permissions.AllowAny,)
 
     def create(self, request):
@@ -66,16 +87,24 @@ class RegisterViewSet(
         Метод создает нового пользователя
         и отправляет на его почту - код подтверждения.
         """
-        serializer = RegisterSerializer(data=request.data)
+        serializer = UserRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        user = get_object_or_404(
-            User,
-            username=serializer.validated_data['username']
-        )
+        try:
+            user, _ = User.objects.get_or_create(
+                **serializer.validated_data
+            )
+        except IntegrityError:
+            return Response(
+                'Такой логин или email уже существуют',
+                status=status.HTTP_400_BAD_REQUEST
+            )
         confirmation_code = default_token_generator.make_token(user)
+        user.confirmation_code = confirmation_code
+        user.save()
+        print(serializer.data)
+
         send_mail(
-            subject='Регистрация в сервисе YaMDb',
+            subject='YaMDb registration',
             message=f'Ваш код подтверждения: {confirmation_code}',
             from_email=None,
             recipient_list=[user.email],
@@ -93,7 +122,7 @@ class GetTokenViewSet(
     serializer_class = TokenSerializer
     permission_classes = (permissions.AllowAny,)
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request):
         serializer = TokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = get_object_or_404(
