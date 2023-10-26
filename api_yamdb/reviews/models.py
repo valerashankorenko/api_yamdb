@@ -12,8 +12,10 @@ def validate_year(value):
 
 
 class NameSlugModel(models.Model):
-    name = models.CharField('Название категории', max_length=256, editable=False)
-    slug = models.SlugField('Слаг', max_length=50, unique=True, editable=False)
+    name = models.CharField('Название категории', max_length=256,
+                            editable=False)
+    slug = models.SlugField('Слаг', max_length=50, unique=True,
+                            editable=False)
 
     class Meta:
         abstract = True
