@@ -44,9 +44,9 @@ class Genre(NameSlugModel):
 class Title(models.Model):
     name = models.CharField('Название произведения', max_length=256,
                             editable=False)
-    year = models.IntegerField('Год выхода произведения', max_length=4,
+    year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year], editable=False)
-    reting = models.IntegerField('Рейтинг', max_length=2)
+    reting = models.IntegerField('Рейтинг')
     description = models.TextField('Описание', editable=False)
     genre = models.ManyToManyField(Genre, through='TitleGenre',
                                    verbose_name='Жанр')
