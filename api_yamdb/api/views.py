@@ -1,17 +1,26 @@
-from rest_framework import viewsets
+from rest_framework import filters, permissions, viewsets
+from rest_framework.pagination import PageNumberPagination
 
 from reviews.models import Category, Genre, Title
 from .serializers import CategorySerializer, GenreSerializer, TitleSerializer
 
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = (permissions.AllowAny,)
+    pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ("name",)
 
 
-class GenreViewSet(viewsets.ReadOnlyModelViewSet):
+class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    permission_classes = (permissions.AllowAny,)
+    pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ("name",)
 
 
 class TitleViewSet(viewsets.ModelViewSet):

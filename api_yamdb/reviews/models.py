@@ -47,7 +47,8 @@ class Title(models.Model):
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year], editable=False)
     reting = models.IntegerField('Рейтинг')
-    description = models.TextField('Описание', editable=False)
+    description = models.TextField('Описание', null=True, blank=True,
+                                   editable=False)
     genre = models.ManyToManyField(Genre, through='TitleGenre',
                                    verbose_name='Жанр')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
