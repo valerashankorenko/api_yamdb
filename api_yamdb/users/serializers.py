@@ -1,5 +1,4 @@
 from rest_framework import serializers
-# from rest_framework.validators import UniqueValidator
 
 from .models import User
 
@@ -25,19 +24,6 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'username', 'email', 'first_name', 'last_name', 'bio', 'role',
         )
-
-
-class UserEditSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для модели - User.
-    Для самостоятельного редактирования пользователем своего профиля.
-    """
-    class Meta:
-        fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role',
-        )
-        model = User
-        read_only_fields = ('role',)
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):

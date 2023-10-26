@@ -12,7 +12,7 @@ from .permissions import (
     IsAdmin,
 )
 from .serializers import (
-    TokenSerializer, UserEditSerializer, UserRegisterSerializer, UserSerializer
+    TokenSerializer, UserRegisterSerializer, UserSerializer
 )
 
 
@@ -35,7 +35,10 @@ class UserViewSet(
         serializer_class=UserSerializer,
     )
     def get_user_profile(self, request, username):
-        """Получение данных о пользователе и их редактирование."""
+        """
+        Метод реализует:
+        - получение данных о пользователе, их редактирование или удаление.
+        """
         user = get_object_or_404(User, username=username)
         if request.method == 'PATCH':
             serializer = UserSerializer(
@@ -50,7 +53,7 @@ class UserViewSet(
             user.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         serializer = UserSerializer(user)
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
         methods=['get', 'patch'],
@@ -59,7 +62,10 @@ class UserViewSet(
         permission_classes=(permissions.IsAuthenticated,),
     )
     def get_own_profile(self, request):
-        """Получение пользоветелем данных о себе и их редактирование."""
+        """
+        Метод реализует:
+        - получение пользователем данных о себе и их редактирование.
+        """
         if request.method == 'PATCH':
             serializer = UserSerializer(
                 request.user,
@@ -68,7 +74,9 @@ class UserViewSet(
                 context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
+            serializer.save(role=request.user.role)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -84,8 +92,9 @@ class RegisterViewSet(
 
     def create(self, request):
         """
-        Метод создает нового пользователя
-        и отправляет на его почту - код подтверждения.
+        Метод реализует:
+        - создание нового пользователя,
+        - отправку на его почту - кода подтверждения.
         """
         serializer = UserRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -94,15 +103,21 @@ class RegisterViewSet(
                 **serializer.validated_data
             )
         except IntegrityError:
+            # обработка исключения,
+            # вызванного дублированием одного из ключевых полей
+            email = serializer.validated_data['email']
+            username = serializer.validated_data['username']
+            if User.objects.filter(email=email).exists():
+                err_value = f'email - {email}'
+            if User.objects.filter(username=username).exists():
+                err_value = f'логином - {username}'
             return Response(
-                'Такой логин или email уже существуют',
+                f'Пользователь с {err_value}, уже существует.',
                 status=status.HTTP_400_BAD_REQUEST
             )
         confirmation_code = default_token_generator.make_token(user)
         user.confirmation_code = confirmation_code
         user.save()
-        print(serializer.data)
-
         send_mail(
             subject='YaMDb registration',
             message=f'Ваш код подтверждения: {confirmation_code}',
@@ -123,6 +138,9 @@ class GetTokenViewSet(
     permission_classes = (permissions.AllowAny,)
 
     def create(self, request):
+        """
+        Метод реализует создание JWT-токена.
+        """
         serializer = TokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = get_object_or_404(
