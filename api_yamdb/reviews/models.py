@@ -17,7 +17,7 @@ def validate_year(value):
 
 class NameSlugModel(models.Model):
     name = models.CharField('Название категории', max_length=256,
-                            editable=False)
+                            unique=True, blank=False, editable=False)
     slug = models.SlugField('Слаг', max_length=50, unique=True,
                             editable=False)
 
@@ -26,6 +26,9 @@ class NameSlugModel(models.Model):
 
 
 class Category(NameSlugModel):
+    """
+    Модель для хранения категорий.
+    """
 
     class Meta:
         verbose_name = 'категория'
@@ -36,6 +39,9 @@ class Category(NameSlugModel):
 
 
 class Genre(NameSlugModel):
+    """
+    Модель для хранения жанров.
+    """
 
     class Meta:
         verbose_name = 'жанр'
@@ -53,13 +59,13 @@ class Title(models.Model):
                             editable=False)
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year], editable=False)
-    reting = models.IntegerField('Рейтинг')
+    reting = models.IntegerField('Рейтинг', null=True)
     description = models.TextField('Описание', null=True, blank=True,
                                    editable=False)
     genre = models.ManyToManyField(Genre, through='TitleGenre',
-                                   verbose_name='Жанр')
+                                   related_name='title', verbose_name='Жанр')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
-                                 related_name='titles', null=True,
+                                 related_name='title', null=True,
                                  verbose_name='Категория')
 
     class Meta:
