@@ -37,12 +37,11 @@ class Genre(NameSlugModel):
 
 
 class Title(models.Model):
-    name = models.CharField('Название произведения', max_length=256,
-                            editable=False)
+    name = models.CharField('Название произведения', max_length=256)
     year = models.IntegerField('Год выхода произведения',
-                               validators=[validate_year], editable=False)
+                               validators=[validate_year])
     reting = models.IntegerField('Рейтинг')
-    description = models.TextField('Описание', editable=False)
+    description = models.TextField('Описание')
     genre = models.ManyToManyField(Genre, through='TitleGenre',
                                    verbose_name='Жанр')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
