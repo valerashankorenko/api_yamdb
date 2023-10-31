@@ -203,13 +203,17 @@ class TitleViewSet(viewsets.ModelViewSet):
         """
         if self.request.method == 'GET':
             return (permissions.AllowAny(),)
-        elif self.request.method in ['POST', 'PATCH', 'DELETE']:
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             return (IsAdmin(),)
         else:
             return super().get_permissions()
 
-    def perform_create(self, serializer):
-        serializer.save()
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

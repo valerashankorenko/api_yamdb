@@ -166,7 +166,7 @@ class TitleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = '__all__'
+        fields = ('name', 'year', 'description', 'genre', 'category')
 
 
 class CommentSerializer(serializers.ModelSerializer):

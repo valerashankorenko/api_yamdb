@@ -87,8 +87,7 @@ def validate_year(value):
 
 
 class NameSlugModel(models.Model):
-    name = models.CharField('Название категории', max_length=256,
-                            editable=False)
+    name = models.CharField('Название категории', max_length=256)
     slug = models.SlugField('Слаг', max_length=50)
 
     class Meta:
@@ -121,13 +120,14 @@ class Title(models.Model):
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year])
     rating = models.OneToOneField(
-        'Rating', on_delete=models.CASCADE,
-        null=True, blank=True, related_name='title_rating')
+        'Rating', on_delete=models.CASCADE, null=True,
+        related_name='title_rating')
     description = models.TextField('Описание', null=True, blank=True)
     genre = models.ManyToManyField(Genre, through='TitleGenre',
                                    verbose_name='Жанр')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
-                                 related_name='titles', null=True,
+                                 null=True,
+                                 related_name='titles',
                                  verbose_name='Категория')
 
     class Meta:
@@ -141,11 +141,12 @@ class Title(models.Model):
 class TitleGenre(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE,
                               verbose_name='Название произведения')
-    genre = models.ForeignKey(Genre, on_delete=models.SET_NULL,
-                              null=True, verbose_name='Жанр')
+    genre = models.ForeignKey(
+        Genre, on_delete=models.SET_NULL,
+        null=True, verbose_name='Жанр')
 
     def __str__(self):
-        return f'{self.title} - {self.genre}'
+        return f'{self.title} {self.genre}'
 
 
 class Review(models.Model):
@@ -161,7 +162,7 @@ class Review(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='reviews',
         verbose_name='Автор отзыва')
-    score = models.IntegerField('Рейтинг отзыва',
+    score = models.IntegerField('Оценка произведения',
                                 validators=[MinValueValidator(1),
                                             MaxValueValidator(10)])
     pub_date = models.DateTimeField(
@@ -202,22 +203,32 @@ class Comment(models.Model):
 class Rating(models.Model):
     """
     Модель для хранения рейтингов произведений.
-
     Методы:
-        - update_score: обновляет рейтинг произведения,
-        рассчитывая среднее значение от всех оценок отзывов.
+        - update: обновляет рейтинг произведения,
+        рассчитывая среднее значение от всех оценок отзывов произведений.
     """
-    title = models.OneToOneField(Title, on_delete=models.CASCADE,
-                                 related_name='title_rating',
-                                 verbose_name='Название произведения')
-    score = models.IntegerField('Рейтинг произведения', null=True, blank=True)
 
-    def update_score(self):
-        reviews = self.title.reviews.all()
-        if reviews.exists():
-            self.score = reviews.aggregate(Avg('score'))['score__avg']
-            if self.score is not None:
-                self.save()
+    title = models.OneToOneField(
+        Title, on_delete=models.CASCADE,
+        related_name='title_rating',
+        verbose_name='Произведение'
+    )
+    rating = models.IntegerField('Рейтинг', default=0)
+
+    class Meta:
+        verbose_name = 'Рейтинг'
+        verbose_name_plural = 'Рейтинги'
 
     def __str__(self):
-        return f'{self.title.name} - {self.score}'
+        return f"Рейтинг произведения '{self.title.rating}'"
+
+    def update(self):
+        reviews = self.title.reviews.all()
+        total_score = 0
+        for review in reviews:
+            total_score += review.score
+        if reviews.count() > 0:
+            self.rating = total_score / reviews.count()
+        else:
+            self.rating = 0
+        self.save()
