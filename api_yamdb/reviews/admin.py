@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Genre, Title, TitleGenre, User
+from .models import Category, Genre, Review, Comment, Title, TitleGenre, User
 
 
 @admin.register(Title)
@@ -35,3 +35,7 @@ class PostAdmin(admin.ModelAdmin):
     list_display_links = ('email', 'username')
     search_fields = ('email', 'username')
     empty_value_display = '-пусто-'
+
+
+admin.site.register(Review)
+admin.site.register(Comment)

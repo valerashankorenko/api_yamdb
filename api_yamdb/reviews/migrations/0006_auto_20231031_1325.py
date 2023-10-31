@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='title',
-            name='reting',
+            name='rating',
             field=models.IntegerField(blank=True, default=None, null=True, verbose_name='Рейтинг'),
         ),
         migrations.AlterField(

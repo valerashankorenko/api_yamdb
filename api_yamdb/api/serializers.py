@@ -107,14 +107,14 @@ class TitleReadOnlySerializer(serializers.ModelSerializer):
     """
     Сериалайзел для GET запросов.
     """
-    reting = serializers.IntegerField(read_only=True)
+    rating = serializers.IntegerField(read_only=True)
     genre = GenreSerializer(many=True,)
     category = CategorySerializer()
 
     class Meta:
         model = Title
         fields = (
-            'id', 'name', 'year', 'reting', 'description', 'genre', 'category'
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
 
 
