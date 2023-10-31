@@ -16,8 +16,8 @@ from .filters import TitleFilter
 from .permissions import IsAdmin, IsOwner, IsAdminOrReadOnly
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer, TitleSerializer,
-                          TitleReadOnlySerializer, TokenSerializer, UserRegisterSerializer,
-                          UserSerializer)
+                          TitleReadOnlySerializer, TokenSerializer,
+                          UserRegisterSerializer, UserSerializer)
 
 
 class UserViewSet(
@@ -190,12 +190,15 @@ class ListCreatRetriveDestroyViewSet(mixins.ListModelMixin,
                                      mixins.RetrieveModelMixin,
                                      mixins.CreateModelMixin,
                                      mixins.DestroyModelMixin,
+                                     mixins.UpdateModelMixin,
                                      viewsets.GenericViewSet,):
     pass
 
 
-class TitleViewSet(ListCreatRetriveDestroyViewSet):
-    queryset = Title.objects.all().annotate(rating=Avg('reviews__score')).order_by('name')
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all().annotate(
+        rating=Avg('reviews__score')
+    ).order_by('name')
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     pagination_class = PageNumberPagination
@@ -206,7 +209,7 @@ class TitleViewSet(ListCreatRetriveDestroyViewSet):
         """
         Выбор Serializer при при безопасных методах и нет.
         """
-        if self.request.method in ('POST', 'PATCH'):
+        if self.request.method in ('PATCH', 'POST'):
             return TitleSerializer
         return TitleReadOnlySerializer
 
@@ -216,7 +219,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     Представление для работы с объектами Review.
 
     Параметры:
-        - Включает CRUD-операции, связь с объектами Tile.
+        - Включает CRUD-операции, связь с объектами Title.
         - Необходимо указать title_id в URL для работы с отзывами:
         /titles/{title_id}/reviews/.
     """
