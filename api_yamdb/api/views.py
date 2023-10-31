@@ -11,6 +11,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
+from .filters import TitleFilter
 from .permissions import IsAdmin, IsOwner, IsAdminOrReadOnly
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer, TitleSerializer,
@@ -198,7 +199,7 @@ class TitleViewSet(ListCreatRetriveDestroyViewSet):
     permission_classes = (IsAdminOrReadOnly,)
     pagination_class = PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('category__name', 'genre__name', 'name', 'year')
+    filterset_class = TitleFilter
 
     def get_serializer_class(self):
         """
