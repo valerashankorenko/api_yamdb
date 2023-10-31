@@ -7,12 +7,14 @@ from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.pagination import PageNumberPagination
+
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
-from .permissions import IsAdmin, IsOwner
+from .permissions import IsAdmin, IsOwner, IsAdminOrReadOnly
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, ReviewSerializer, TitleSerializer,
-                          TokenSerializer, UserRegisterSerializer,
+                          TitleReadOnlySerializer, TokenSerializer, UserRegisterSerializer,
                           UserSerializer)
 
 
@@ -155,61 +157,56 @@ class GetTokenViewSet(
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class ListCreatDestroyViewSet(mixins.ListModelMixin,
+                              mixins.CreateModelMixin,
+                              mixins.DestroyModelMixin,
+                              viewsets.GenericViewSet,):
+    pass
+
+
+class CategoryViewSet(ListCreatDestroyViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-
-    def get_permissions(self):
-        """
-        Определяет права доступа в зависимости от метода запроса.
-        """
-        if self.request.method == 'GET':
-            return (permissions.AllowAny(),)
-        elif self.request.method in ['POST', 'PATCH', 'DELETE']:
-            return (IsAdmin(),)
-        else:
-            return super().get_permissions()
+    lookup_field = 'slug'
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(ListCreatDestroyViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-
-    def get_permissions(self):
-        """
-        Определяет права доступа в зависимости от метода запроса.
-        """
-        if self.request.method == 'GET':
-            return (permissions.AllowAny(),)
-        elif self.request.method in ['POST', 'PATCH', 'DELETE']:
-            return (IsAdmin(),)
-        else:
-            return super().get_permissions()
+    lookup_field = 'slug'
 
 
-class TitleViewSet(viewsets.ModelViewSet):
+class ListCreatRetriveDestroyViewSet(mixins.ListModelMixin,
+                                     mixins.RetrieveModelMixin,
+                                     mixins.CreateModelMixin,
+                                     mixins.DestroyModelMixin,
+                                     viewsets.GenericViewSet,):
+    pass
+
+
+class TitleViewSet(ListCreatRetriveDestroyViewSet):
     queryset = Title.objects.all().order_by('name')
     serializer_class = TitleSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('category__name', 'genre__name', 'name', 'year')
 
-    def get_permissions(self):
+    def get_serializer_class(self):
         """
-        Определяет права доступа в зависимости от метода запроса.
+        Выбор Serializer при при безопасных методах и нет.
         """
-        if self.request.method == 'GET':
-            return (permissions.AllowAny(),)
-        elif self.request.method in ['POST', 'PATCH', 'DELETE']:
-            return (IsAdmin(),)
-        else:
-            return super().get_permissions()
-
-    def perform_create(self, serializer):
-        serializer.save()
+        if self.request.method in ('POST', 'PATCH'):
+            return TitleSerializer
+        return TitleReadOnlySerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

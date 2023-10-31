@@ -2,6 +2,8 @@ import re
 
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework import filters, mixins, viewsets
+from rest_framework.relations import SlugRelatedField
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
@@ -57,35 +59,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         )
 
 
-class CategorySerializer(serializers.Serializer):
-    """
-    Сериализатор для модели Category.
-    """
-    name = serializers.CharField(required=True, max_length=256)
-    slug = serializers.CharField(required=True, max_length=50)
-
-    def validate_name(self, value):
-        if len(value) > 256:
-            raise serializers.ValidationError(
-                'Имя должно быть меньше или равно 256 символам.')
-        return value
-
-    def validate_slug(self, value):
-        if len(value) > 50:
-            raise serializers.ValidationError(
-                'Слаг должен быть меньше или равен 50 символам.')
-        if not re.match(r'^[-a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Слаг должен содержать только буквы, цифры,'
-                'дефисы и символы подчеркивания.')
-        return value
-
-    def create(self, validated_data):
-        category = Category.objects.create(
-            name=validated_data['name'],
-            slug=validated_data['slug']
-        )
-        return category
+class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
@@ -95,34 +69,6 @@ class CategorySerializer(serializers.Serializer):
 
 
 class GenreSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для модели Genre.
-    """
-    name = serializers.CharField(required=True, max_length=256)
-    slug = serializers.CharField(required=True, max_length=50)
-
-    def validate_name(self, value):
-        if len(value) > 256:
-            raise serializers.ValidationError(
-                'Имя должно быть меньше или равно 256 символам.')
-        return value
-
-    def validate_slug(self, value):
-        if len(value) > 50:
-            raise serializers.ValidationError(
-                'Слаг должен быть меньше или равен 50 символам.')
-        if not re.match(r'^[-a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Слаг должен содержать только буквы, цифры,'
-                'дефисы и символы подчеркивания.')
-        return value
-
-    def create(self, validated_data):
-        genre = Genre.objects.create(
-            name=validated_data['name'],
-            slug=validated_data['slug']
-        )
-        return genre
 
     class Meta:
         model = Genre
@@ -133,8 +79,16 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class TitleSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для модели Title.
+    Сериалайзел для POST, RATCH и DEL запросов.
     """
+    name = serializers.CharField(required=True, max_length=256)
+    
+    genre = SlugRelatedField(
+        slug_field='slug', many=True, queryset=Genre.objects.all()
+    )
+    category = SlugRelatedField(
+        slug_field='slug', queryset=Category.objects.all()
+    )
 
     def validate_name(self, value):
         if len(value) > 256:
@@ -142,31 +96,28 @@ class TitleSerializer(serializers.ModelSerializer):
                 'Имя должно быть меньше или равно 256 символам.')
         return value
 
-    def validate_year(self, value):
-        current_year = timezone.now().year
-        if value > current_year:
-            raise serializers.ValidationError(
-                'Год выхода произведения не может быть больше текущего года.')
-        return value
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'description', 'genre', 'category'
+        )
 
-    def validate_category(self, value):
-        try:
-            Category.objects.get(name=value)
-        except Category.DoesNotExist:
-            raise serializers.ValidationError(
-                'Указанная категория не существует.')
-        return value
 
-    def validate_genre(self, value):
-        try:
-            Genre.objects.get(name=value)
-        except Genre.DoesNotExist:
-            raise serializers.ValidationError('Указанный жанр не существует.')
-        return value
+class TitleReadOnlySerializer(serializers.ModelSerializer):
+    """
+    Сериалайзел для GET запросов.
+    """
+    reting = serializers.IntegerField(
+        source='', default=1, read_only=True
+    )
+    genre = GenreSerializer(many=True,)
+    category = CategorySerializer()
 
     class Meta:
         model = Title
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'year', 'reting', 'description', 'genre', 'category'
+        )
 
 
 class CommentSerializer(serializers.ModelSerializer):

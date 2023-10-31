@@ -87,9 +87,8 @@ def validate_year(value):
 
 
 class NameSlugModel(models.Model):
-    name = models.CharField('Название категории', max_length=256,
-                            editable=False)
-    slug = models.SlugField('Слаг', max_length=50)
+    name = models.CharField('Название', max_length=256)
+    slug = models.SlugField('Слаг', max_length=50, unique=True)
 
     class Meta:
         abstract = True
@@ -99,18 +98,15 @@ class Category(NameSlugModel):
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
-        unique_together = ('slug',)
 
     def __str__(self):
         return self.name
 
 
 class Genre(NameSlugModel):
-
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
-        unique_together = ('slug',)
 
     def __str__(self):
         return self.name
@@ -120,10 +116,9 @@ class Title(models.Model):
     name = models.CharField('Название произведения', max_length=256)
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year])
-    rating = models.OneToOneField(
-        'Rating', on_delete=models.CASCADE,
-        null=True, blank=True, related_name='title_rating')
-    description = models.TextField('Описание', null=True, blank=True)
+    reting = models.IntegerField('Рейтинг', blank=True,
+                                 null=True, default=None)
+    description = models.TextField('Описание')
     genre = models.ManyToManyField(Genre, through='TitleGenre',
                                    verbose_name='Жанр')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
@@ -141,8 +136,12 @@ class Title(models.Model):
 class TitleGenre(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE,
                               verbose_name='Название произведения')
-    genre = models.ForeignKey(Genre, on_delete=models.SET_NULL,
-                              null=True, verbose_name='Жанр')
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE,
+                              verbose_name='Жанр')
+
+    class Meta:
+        verbose_name = 'Произведение-Жанр'
+        verbose_name_plural = 'Произведения-Жанры'
 
     def __str__(self):
         return f'{self.title} - {self.genre}'

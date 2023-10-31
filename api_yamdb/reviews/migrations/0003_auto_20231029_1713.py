@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='title',
             name='description',
-            field=models.TextField(blank=True, editable=False, null=True, verbose_name='Описание'),
+            field=models.TextField(verbose_name='Описание'),
         ),
         migrations.AlterField(
             model_name='title',
@@ -70,7 +70,7 @@ class Migration(migrations.Migration):
             name='TitleGenre',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('genre', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='reviews.genre', verbose_name='Жанр')),
+                ('genre', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='reviews.genre', verbose_name='Жанр')),
                 ('title', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='reviews.title', verbose_name='Название произведения')),
             ],
         ),
