@@ -107,9 +107,7 @@ class TitleReadOnlySerializer(serializers.ModelSerializer):
     """
     Сериалайзел для GET запросов.
     """
-    reting = serializers.IntegerField(
-        source='', default=1, read_only=True
-    )
+    reting = serializers.IntegerField(read_only=True)
     genre = GenreSerializer(many=True,)
     category = CategorySerializer()
 

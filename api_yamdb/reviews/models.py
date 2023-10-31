@@ -116,8 +116,6 @@ class Title(models.Model):
     name = models.CharField('Название произведения', max_length=256)
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year])
-    reting = models.IntegerField('Рейтинг', blank=True,
-                                 null=True, default=None)
     description = models.TextField('Описание')
     genre = models.ManyToManyField(Genre, through='TitleGenre',
                                    verbose_name='Жанр')

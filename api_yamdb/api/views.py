@@ -1,6 +1,7 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import IntegrityError
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
@@ -194,7 +195,7 @@ class ListCreatRetriveDestroyViewSet(mixins.ListModelMixin,
 
 
 class TitleViewSet(ListCreatRetriveDestroyViewSet):
-    queryset = Title.objects.all().order_by('name')
+    queryset = Title.objects.all().annotate(rating=Avg('reviews__score')).order_by('name')
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     pagination_class = PageNumberPagination
