@@ -60,7 +60,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
+    """
+    Сериализатор для модели - Category.
+    """
     class Meta:
         model = Category
         fields = ('name', 'slug')
@@ -69,7 +71,9 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class GenreSerializer(serializers.ModelSerializer):
-
+    """
+    Сериализатор для модели - Genre.
+    """
     class Meta:
         model = Genre
         fields = ('name', 'slug')

@@ -95,6 +95,9 @@ class NameSlugModel(models.Model):
 
 
 class Category(NameSlugModel):
+    """
+    Модель для категорий.
+    """
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
@@ -104,6 +107,9 @@ class Category(NameSlugModel):
 
 
 class Genre(NameSlugModel):
+    """
+    Модель для жанров.
+    """
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
@@ -113,6 +119,9 @@ class Genre(NameSlugModel):
 
 
 class Title(models.Model):
+    """
+    Модель для произведений.
+    """
     name = models.CharField('Название произведения', max_length=256)
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year])

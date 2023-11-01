@@ -167,6 +167,9 @@ class ListCreatDestroyViewSet(mixins.ListModelMixin,
 
 
 class CategoryViewSet(ListCreatDestroyViewSet):
+    """
+    Вьюсет для Category.
+    """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -177,6 +180,9 @@ class CategoryViewSet(ListCreatDestroyViewSet):
 
 
 class GenreViewSet(ListCreatDestroyViewSet):
+    """
+    Вьюсет для Genre.
+    """
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -186,28 +192,24 @@ class GenreViewSet(ListCreatDestroyViewSet):
     lookup_field = 'slug'
 
 
-class ListCreatRetriveDestroyViewSet(mixins.ListModelMixin,
-                                     mixins.RetrieveModelMixin,
-                                     mixins.CreateModelMixin,
-                                     mixins.DestroyModelMixin,
-                                     mixins.UpdateModelMixin,
-                                     viewsets.GenericViewSet,):
-    pass
-
-
 class TitleViewSet(viewsets.ModelViewSet):
+    """
+    Вьюсет для Title.
+    Подсчитывает рейтинг для каждого произведения.
+    """
     queryset = Title.objects.all().annotate(
         rating=Avg('reviews__score')
     ).order_by('name')
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     pagination_class = PageNumberPagination
+    http_method_names = ['get', 'post', 'patch', 'delete']
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
     def get_serializer_class(self):
         """
-        Выбор Serializer при при безопасных методах и нет.
+        Выбор Serializer при безопасных методах и нет.
         """
         if self.request.method in ('PATCH', 'POST'):
             return TitleSerializer
