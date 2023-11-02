@@ -79,7 +79,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class TitleSerializer(serializers.ModelSerializer):
     """
-    Сериалайзел для POST, RATCH и DEL запросов.
+    Сериализатор для POST, PATCH и DELETE запросов.
     """
     name = serializers.CharField(required=True, max_length=256)
 
@@ -91,6 +91,9 @@ class TitleSerializer(serializers.ModelSerializer):
     )
 
     def validate_name(self, value):
+        """
+        Метод проверяет длину имени.
+        """
         if len(value) > 256:
             raise serializers.ValidationError(
                 'Имя должно быть меньше или равно 256 символам.')
@@ -105,7 +108,7 @@ class TitleSerializer(serializers.ModelSerializer):
 
 class TitleReadOnlySerializer(serializers.ModelSerializer):
     """
-    Сериалайзел для GET запросов.
+    Сериализатор для GET запросов.
     """
     rating = serializers.IntegerField(read_only=True)
     genre = GenreSerializer(many=True,)
@@ -133,6 +136,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
+        """
+        Метод проверяет отзыв на дубликат.
+        """
         existing_review = Review.objects.filter(
             title=validated_data['title'], author=self.context['request'].user
         ).exists()

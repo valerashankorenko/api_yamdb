@@ -1,25 +1,17 @@
 from rest_framework import permissions
 
 
-class IsReviewAuthor(permissions.IsAuthenticated):
-    """
-    Доступ разрешен только автору отзыва.
-    """
-
-    def has_object_permission(self, request, view, obj):
-        return obj.author == request.user
-
-
 class IsModeratorOrAdmin(permissions.BasePermission):
     """
-    Разрешает модераторам и администраторам редактировать
+    Разрешение авторам редактировать и удалять свои отзывы и комментарии,
+    а модераторам, администраторам и суперпользователям редактировать
     и удалять чужие отзывы и комментарии.
     """
 
     def has_object_permission(self, request, view, obj):
         return request.user.is_authenticated and (
             request.user.is_moderator or request.user.is_admin
-            or obj.author == request.user)
+            or request.user.is_superuser or obj.author == request.user)
 
 
 class IsAdmin(permissions.BasePermission):
@@ -34,7 +26,7 @@ class IsAdmin(permissions.BasePermission):
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
-    Разрешен безопасные методы для всех пользователей.
+    Разрешены безопасные методы для всех пользователей.
     Все остальные методы только для Администратора и Суперюзера.
     """
 

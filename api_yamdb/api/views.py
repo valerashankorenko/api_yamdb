@@ -24,7 +24,7 @@ class UserViewSet(
     mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
 ):
     """
-    Вьюсет для для работы с моделью - User.
+    Вьюсет для работы с моделью - User.
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -159,16 +159,12 @@ class GetTokenViewSet(
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ListCreatDestroyViewSet(mixins.ListModelMixin,
-                              mixins.CreateModelMixin,
-                              mixins.DestroyModelMixin,
-                              viewsets.GenericViewSet,):
-    pass
-
-
-class CategoryViewSet(ListCreatDestroyViewSet):
+class CategoryViewSet(mixins.ListModelMixin,
+                      mixins.CreateModelMixin,
+                      mixins.DestroyModelMixin,
+                      viewsets.GenericViewSet,):
     """
-    Вьюсет для Category.
+    Вьюсет для работы с моделью - Category.
     """
     queryset = Category.objects.order_by('id')
     serializer_class = CategorySerializer
@@ -179,9 +175,12 @@ class CategoryViewSet(ListCreatDestroyViewSet):
     lookup_field = 'slug'
 
 
-class GenreViewSet(ListCreatDestroyViewSet):
+class GenreViewSet(mixins.ListModelMixin,
+                   mixins.CreateModelMixin,
+                   mixins.DestroyModelMixin,
+                   viewsets.GenericViewSet,):
     """
-    Вьюсет для Genre.
+    Вьюсет для работы с моделью - Genre.
     """
     queryset = Genre.objects.order_by('id')
     serializer_class = GenreSerializer
@@ -194,7 +193,7 @@ class GenreViewSet(ListCreatDestroyViewSet):
 
 class TitleViewSet(viewsets.ModelViewSet):
     """
-    Вьюсет для Title.
+    Вьюсет для работы с моделью - Title.
     Подсчитывает рейтинг для каждого произведения.
     """
     queryset = Title.objects.all().annotate(
@@ -209,7 +208,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         """
-        Выбор Serializer при безопасных методах и нет.
+        Метод для выбора Serializer в зависимости от метода запроса.
         """
         if self.request.method in ('PATCH', 'POST'):
             return TitleSerializer
@@ -218,7 +217,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     """
-    Вьюсет для работы с объектами Review.
+    Вьюсет для работы с моделью - Review.
 
     Параметры:
         - Включает CRUD-операции, связь с объектами Tile.
@@ -232,7 +231,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """
-        Определяет права доступа в зависимости от метода запроса.
+        Метод определяет права доступа в зависимости от метода запроса.
         """
         if self.request.method == 'GET':
             return (permissions.AllowAny(),)
@@ -245,7 +244,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Устанавливает автора при создании отзыва.
+        Метод устанавливает автора при создании отзыва.
         """
         title_id = self.kwargs.get('title_id')
         title = get_object_or_404(Title, id=title_id)
@@ -257,7 +256,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     """
-    Вьюсет для работы с объектами Comment.
+    Вьюсет для работы с моделью - Comment.
 
     Параметры:
         - Включает CRUD-операции, связь с объектами Review.
@@ -270,7 +269,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """
-        Определяет права доступа в зависимости от метода запроса.
+        Метод определяет права доступа в зависимости от метода запроса.
         """
         if self.request.method == 'GET':
             return (permissions.AllowAny(),)
@@ -283,7 +282,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Устанавливает автора при создании комментария.
+        Метод устанавливает автора при создании комментария.
         """
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id)

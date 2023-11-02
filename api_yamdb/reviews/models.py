@@ -11,6 +11,9 @@ LENGTH_TITLE = 20
 
 
 class User(AbstractUser):
+    """
+    Кастомная модель User.
+    """
     ADMIN = 'admin'
     MODERATOR = 'moderator'
     USER = 'user'
@@ -81,12 +84,18 @@ class User(AbstractUser):
 
 
 def validate_year(value):
+    """
+    Метод для проверки года произведения.
+    """
     if value > datetime.now().year:
         raise ValidationError('Указанный %(value)s  год больше текущего',
                               params={'value': value})
 
 
 class NameSlugModel(models.Model):
+    """
+    Абстрактная модель.
+    """
     name = models.CharField('Название', max_length=256)
     slug = models.SlugField('Слаг', max_length=50, unique=True)
 
@@ -95,6 +104,9 @@ class NameSlugModel(models.Model):
 
 
 class Category(NameSlugModel):
+    """
+    Модель для создания категорий для произведений.
+    """
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
@@ -104,6 +116,9 @@ class Category(NameSlugModel):
 
 
 class Genre(NameSlugModel):
+    """
+    Модель для создания жанров для произведений.
+    """
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
@@ -113,6 +128,9 @@ class Genre(NameSlugModel):
 
 
 class Title(models.Model):
+    """
+    Модель для создания произведений.
+    """
     name = models.CharField('Название произведения', max_length=256)
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year])
@@ -132,6 +150,10 @@ class Title(models.Model):
 
 
 class TitleGenre(models.Model):
+    """
+    Промежуточная модель для модели Title.
+    Позволяет создать связь ManyToManyField.
+    """
     title = models.ForeignKey(Title, on_delete=models.CASCADE,
                               verbose_name='Название произведения')
     genre = models.ForeignKey(Genre, on_delete=models.CASCADE,
@@ -147,7 +169,7 @@ class TitleGenre(models.Model):
 
 class Review(models.Model):
     """
-    Модель для хранения отзывов на произведения.
+    Модель для создания отзывов на произведения.
     """
     title = models.ForeignKey(
         Title, on_delete=models.CASCADE,
@@ -175,7 +197,7 @@ class Review(models.Model):
 
 class Comment(models.Model):
     """
-    Модель для хранения комментариев к отзывам.
+    Модель для создания комментариев к отзывам.
     """
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE,
@@ -199,10 +221,6 @@ class Comment(models.Model):
 class Rating(models.Model):
     """
     Модель для хранения рейтингов произведений.
-
-    Методы:
-        - update_score: обновляет рейтинг произведения,
-        рассчитывая среднее значение от всех оценок отзывов.
     """
     title = models.OneToOneField(Title, on_delete=models.CASCADE,
                                  related_name='title_rating',
@@ -210,6 +228,10 @@ class Rating(models.Model):
     score = models.IntegerField('Рейтинг произведения', null=True, blank=True)
 
     def update_score(self):
+        """
+        Метод обновляет рейтинг произведения, рассчитывая
+        среднее значение от всех оценок отзывов.
+        """
         reviews = self.title.reviews.all()
         if reviews.exists():
             self.score = reviews.aggregate(Avg('score'))['score__avg']
