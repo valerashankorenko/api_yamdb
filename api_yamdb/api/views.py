@@ -1,17 +1,21 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import IntegrityError
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
-from .permissions import IsAdmin, IsOwner
+from .filters import TitleFilter
+from .permissions import IsAdmin, IsAdminOrReadOnly, IsModeratorOrAdmin
 from .serializers import (CategorySerializer, CommentSerializer,
-                          GenreSerializer, ReviewSerializer, TitleSerializer,
+                          GenreSerializer, ReviewSerializer,
+                          TitleReadOnlySerializer, TitleSerializer,
                           TokenSerializer, UserRegisterSerializer,
                           UserSerializer)
 
@@ -155,79 +159,76 @@ class GetTokenViewSet(
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
+class ListCreatDestroyViewSet(mixins.ListModelMixin,
+                              mixins.CreateModelMixin,
+                              mixins.DestroyModelMixin,
+                              viewsets.GenericViewSet,):
+    pass
+
+
+class CategoryViewSet(ListCreatDestroyViewSet):
+    """
+    Вьюсет для Category.
+    """
+    queryset = Category.objects.order_by('id')
     serializer_class = CategorySerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-
-    def get_permissions(self):
-        """
-        Определяет права доступа в зависимости от метода запроса.
-        """
-        if self.request.method == 'GET':
-            return (permissions.AllowAny(),)
-        elif self.request.method in ['POST', 'PATCH', 'DELETE']:
-            return (IsAdmin(),)
-        else:
-            return super().get_permissions()
+    lookup_field = 'slug'
 
 
-class GenreViewSet(viewsets.ModelViewSet):
-    queryset = Genre.objects.all()
+class GenreViewSet(ListCreatDestroyViewSet):
+    """
+    Вьюсет для Genre.
+    """
+    queryset = Genre.objects.order_by('id')
     serializer_class = GenreSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-
-    def get_permissions(self):
-        """
-        Определяет права доступа в зависимости от метода запроса.
-        """
-        if self.request.method == 'GET':
-            return (permissions.AllowAny(),)
-        elif self.request.method in ['POST', 'PATCH', 'DELETE']:
-            return (IsAdmin(),)
-        else:
-            return super().get_permissions()
+    lookup_field = 'slug'
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all().order_by('name')
+    """
+    Вьюсет для Title.
+    Подсчитывает рейтинг для каждого произведения.
+    """
+    queryset = Title.objects.all().annotate(
+        rating=Avg('reviews__score')
+    ).order_by('name')
     serializer_class = TitleSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
+    http_method_names = ['get', 'post', 'patch', 'delete']
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('category__name', 'genre__name', 'name', 'year')
+    filterset_class = TitleFilter
 
-    def get_permissions(self):
+    def get_serializer_class(self):
         """
-        Определяет права доступа в зависимости от метода запроса.
+        Выбор Serializer при безопасных методах и нет.
         """
-        if self.request.method == 'GET':
-            return (permissions.AllowAny(),)
-        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return (IsAdmin(),)
-        else:
-            return super().get_permissions()
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        if self.request.method in ('PATCH', 'POST'):
+            return TitleSerializer
+        return TitleReadOnlySerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
     """
-    Представление для работы с объектами Review.
+    Вьюсет для работы с объектами Review.
 
     Параметры:
         - Включает CRUD-операции, связь с объектами Tile.
         - Необходимо указать title_id в URL для работы с отзывами:
         /titles/{title_id}/reviews/.
     """
-    queryset = Review.objects.all()
+    queryset = Review.objects.order_by('id')
     serializer_class = ReviewSerializer
-    permission_classes = (permissions.AllowAny,)
+    pagination_class = PageNumberPagination
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_permissions(self):
         """
@@ -238,16 +239,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
         elif self.request.method == 'POST':
             return (permissions.IsAuthenticated(),)
         elif self.request.method in ['PATCH', 'DELETE']:
-            return (IsAdmin(), IsOwner(),)
+            return (IsModeratorOrAdmin(),)
         else:
             return super().get_permissions()
-
-    def get_queryset(self):
-        """
-        Возвращает отфильтрованный QuerySet отзывов для конкретного title.
-        """
-        title_id = self.kwargs['title_id']
-        return Review.objects.filter(title_id=title_id)
 
     def perform_create(self, serializer):
         """
@@ -263,16 +257,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     """
-    Представление для работы с объектами Comment.
+    Вьюсет для работы с объектами Comment.
 
     Параметры:
         - Включает CRUD-операции, связь с объектами Review.
         - Необходимо указать title_id и review_id в URL для работы с
         комментариями: /titles/{title_id}/reviews/{review_id}/comments/.
     """
-    queryset = Comment.objects.all()
+    queryset = Comment.objects.order_by('id')
     serializer_class = CommentSerializer
-    permission_classes = (permissions.AllowAny,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_permissions(self):
         """
@@ -283,26 +277,16 @@ class CommentViewSet(viewsets.ModelViewSet):
         elif self.request.method == 'POST':
             return (permissions.IsAuthenticated(),)
         elif self.request.method in ['PATCH', 'DELETE']:
-            return (IsAdmin(), IsOwner(),)
+            return (IsModeratorOrAdmin(),)
         else:
             return super().get_permissions()
-
-    def get_queryset(self):
-        """
-        Возвращает отфильтрованный QuerySet комментариев для конкретного
-        title и review.
-        """
-        title_id = self.kwargs['title_id']
-        review_id = self.kwargs['review_id']
-        return Comment.objects.filter(review__title_id=title_id,
-                                      review_id=review_id)
 
     def perform_create(self, serializer):
         """
         Устанавливает автора при создании комментария.
         """
         review_id = self.kwargs.get('review_id')
-        review = self.__get_post(review_id)
+        review = get_object_or_404(Review, id=review_id)
         serializer.save(author=self.request.user, review=review)
 
     lookup_field = 'pk'

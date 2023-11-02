@@ -87,8 +87,8 @@ def validate_year(value):
 
 
 class NameSlugModel(models.Model):
-    name = models.CharField('Название категории', max_length=256)
-    slug = models.SlugField('Слаг', max_length=50)
+    name = models.CharField('Название', max_length=256)
+    slug = models.SlugField('Слаг', max_length=50, unique=True)
 
     class Meta:
         abstract = True
@@ -98,18 +98,15 @@ class Category(NameSlugModel):
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
-        unique_together = ('slug',)
 
     def __str__(self):
         return self.name
 
 
 class Genre(NameSlugModel):
-
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
-        unique_together = ('slug',)
 
     def __str__(self):
         return self.name
@@ -119,15 +116,11 @@ class Title(models.Model):
     name = models.CharField('Название произведения', max_length=256)
     year = models.IntegerField('Год выхода произведения',
                                validators=[validate_year])
-    rating = models.OneToOneField(
-        'Rating', on_delete=models.CASCADE, null=True,
-        related_name='title_rating')
-    description = models.TextField('Описание', null=True, blank=True)
+    description = models.TextField('Описание')
     genre = models.ManyToManyField(Genre, through='TitleGenre',
                                    verbose_name='Жанр')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
-                                 null=True,
-                                 related_name='titles',
+                                 related_name='titles', null=True,
                                  verbose_name='Категория')
 
     class Meta:
@@ -141,12 +134,15 @@ class Title(models.Model):
 class TitleGenre(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE,
                               verbose_name='Название произведения')
-    genre = models.ForeignKey(
-        Genre, on_delete=models.SET_NULL,
-        null=True, verbose_name='Жанр')
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE,
+                              verbose_name='Жанр')
+
+    class Meta:
+        verbose_name = 'Произведение-Жанр'
+        verbose_name_plural = 'Произведения-Жанры'
 
     def __str__(self):
-        return f'{self.title} {self.genre}'
+        return f'{self.title} - {self.genre}'
 
 
 class Review(models.Model):
@@ -171,7 +167,7 @@ class Review(models.Model):
     class Meta:
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
-        unique_together = (('title', 'author'),)
+        unique_together = ('title', 'author')
 
     def __str__(self):
         return self.text[:LENGTH_TITLE]
@@ -203,32 +199,22 @@ class Comment(models.Model):
 class Rating(models.Model):
     """
     Модель для хранения рейтингов произведений.
+
     Методы:
-        - update: обновляет рейтинг произведения,
-        рассчитывая среднее значение от всех оценок отзывов произведений.
+        - update_score: обновляет рейтинг произведения,
+        рассчитывая среднее значение от всех оценок отзывов.
     """
+    title = models.OneToOneField(Title, on_delete=models.CASCADE,
+                                 related_name='title_rating',
+                                 verbose_name='Название произведения')
+    score = models.IntegerField('Рейтинг произведения', null=True, blank=True)
 
-    title = models.OneToOneField(
-        Title, on_delete=models.CASCADE,
-        related_name='title_rating',
-        verbose_name='Произведение'
-    )
-    rating = models.IntegerField('Рейтинг', default=0)
-
-    class Meta:
-        verbose_name = 'Рейтинг'
-        verbose_name_plural = 'Рейтинги'
+    def update_score(self):
+        reviews = self.title.reviews.all()
+        if reviews.exists():
+            self.score = reviews.aggregate(Avg('score'))['score__avg']
+            if self.score is not None:
+                self.save()
 
     def __str__(self):
-        return f"Рейтинг произведения '{self.title.rating}'"
-
-    def update(self):
-        reviews = self.title.reviews.all()
-        total_score = 0
-        for review in reviews:
-            total_score += review.score
-        if reviews.count() > 0:
-            self.rating = total_score / reviews.count()
-        else:
-            self.rating = 0
-        self.save()
+        return f'{self.title.name} - {self.score}'

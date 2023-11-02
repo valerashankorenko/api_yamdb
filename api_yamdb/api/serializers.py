@@ -1,7 +1,5 @@
-import re
-
-from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.relations import SlugRelatedField
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
@@ -57,36 +55,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         )
 
 
-class CategorySerializer(serializers.Serializer):
+class CategorySerializer(serializers.ModelSerializer):
     """
-    Сериализатор для модели Category.
+    Сериализатор для модели - Category.
     """
-    name = serializers.CharField(required=True, max_length=256)
-    slug = serializers.CharField(required=True, max_length=50)
-
-    def validate_name(self, value):
-        if len(value) > 256:
-            raise serializers.ValidationError(
-                'Имя должно быть меньше или равно 256 символам.')
-        return value
-
-    def validate_slug(self, value):
-        if len(value) > 50:
-            raise serializers.ValidationError(
-                'Слаг должен быть меньше или равен 50 символам.')
-        if not re.match(r'^[-a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Слаг должен содержать только буквы, цифры,'
-                'дефисы и символы подчеркивания.')
-        return value
-
-    def create(self, validated_data):
-        category = Category.objects.create(
-            name=validated_data['name'],
-            slug=validated_data['slug']
-        )
-        return category
-
     class Meta:
         model = Category
         fields = ('name', 'slug')
@@ -96,34 +68,8 @@ class CategorySerializer(serializers.Serializer):
 
 class GenreSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для модели Genre.
+    Сериализатор для модели - Genre.
     """
-    name = serializers.CharField(required=True, max_length=256)
-    slug = serializers.CharField(required=True, max_length=50)
-
-    def validate_name(self, value):
-        if len(value) > 256:
-            raise serializers.ValidationError(
-                'Имя должно быть меньше или равно 256 символам.')
-        return value
-
-    def validate_slug(self, value):
-        if len(value) > 50:
-            raise serializers.ValidationError(
-                'Слаг должен быть меньше или равен 50 символам.')
-        if not re.match(r'^[-a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Слаг должен содержать только буквы, цифры,'
-                'дефисы и символы подчеркивания.')
-        return value
-
-    def create(self, validated_data):
-        genre = Genre.objects.create(
-            name=validated_data['name'],
-            slug=validated_data['slug']
-        )
-        return genre
-
     class Meta:
         model = Genre
         fields = ('name', 'slug')
@@ -133,8 +79,16 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class TitleSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для модели Title.
+    Сериалайзел для POST, RATCH и DEL запросов.
     """
+    name = serializers.CharField(required=True, max_length=256)
+
+    genre = SlugRelatedField(
+        slug_field='slug', many=True, queryset=Genre.objects.all()
+    )
+    category = SlugRelatedField(
+        slug_field='slug', queryset=Category.objects.all()
+    )
 
     def validate_name(self, value):
         if len(value) > 256:
@@ -142,45 +96,26 @@ class TitleSerializer(serializers.ModelSerializer):
                 'Имя должно быть меньше или равно 256 символам.')
         return value
 
-    def validate_year(self, value):
-        current_year = timezone.now().year
-        if value > current_year:
-            raise serializers.ValidationError(
-                'Год выхода произведения не может быть больше текущего года.')
-        return value
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'description', 'genre', 'category'
+        )
 
-    def validate_category(self, value):
-        try:
-            Category.objects.get(name=value)
-        except Category.DoesNotExist:
-            raise serializers.ValidationError(
-                'Указанная категория не существует.')
-        return value
 
-    def validate_genre(self, value):
-        try:
-            Genre.objects.get(name=value)
-        except Genre.DoesNotExist:
-            raise serializers.ValidationError('Указанный жанр не существует.')
-        return value
+class TitleReadOnlySerializer(serializers.ModelSerializer):
+    """
+    Сериалайзел для GET запросов.
+    """
+    rating = serializers.IntegerField(read_only=True)
+    genre = GenreSerializer(many=True,)
+    category = CategorySerializer()
 
     class Meta:
         model = Title
-        fields = ('name', 'year', 'description', 'genre', 'category')
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для модели Comment, представляет поля:
-    id review, text, author и pub_date.
-    Включает особую обработку для поля author.
-    """
-    author = serializers.SlugRelatedField(slug_field='username',
-                                          read_only=True)
-
-    class Meta:
-        model = Comment
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -189,9 +124,36 @@ class ReviewSerializer(serializers.ModelSerializer):
     id title, text, author, score и pub_date.
     Включает особую обработку для поля author.
     """
-    author = serializers.SlugRelatedField(slug_field='username',
-                                          read_only=True)
+    author = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Review
-        fields = '__all__'
+        fields = (
+            'id', 'text', 'author', 'score', 'pub_date'
+        )
+
+    def create(self, validated_data):
+        existing_review = Review.objects.filter(
+            title=validated_data['title'], author=self.context['request'].user
+        ).exists()
+        if existing_review:
+            raise serializers.ValidationError(
+                'На одно произведение пользователь'
+                'может оставить только один отзыв'
+            )
+        return super().create(validated_data)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для модели Comment, представляет поля:
+    id review, text, author и pub_date.
+    Включает особую обработку для поля author.
+    """
+    author = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = fields = (
+            'id', 'text', 'author', 'pub_date'
+        )
