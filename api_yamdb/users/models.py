@@ -9,51 +9,22 @@ class User(AbstractUser):
     USER = 'user'
 
     ROLES = (
-        (ADMIN, 'Administrator'),
-        (MODERATOR, 'Moderator'),
-        (USER, 'User'),
+        (ADMIN, 'Администратор'),
+        (MODERATOR, 'Модератор'),
+        (USER, 'Пользователь'),
     )
 
-    email = models.EmailField(
-        verbose_name='Адрес электронной почты',
-        max_length=254,
-        unique=True,
-    )
+    email = models.EmailField('E-mail', max_length=254, unique=True,)
     username = models.CharField(
-        verbose_name='Имя пользователя (логин)',
+        'Имя пользователя (логин)',
         max_length=150,
         unique=True,
-        validators=([RegexValidator(regex=r'^[\w.@+-]+$')]),
+        validators=(RegexValidator(regex=r'^[\w.@+-]+$'),),
     )
-    first_name = models.CharField(
-        max_length=150,
-        verbose_name='Имя',
-        blank=True
-    )
-    last_name = models.CharField(
-        max_length=150,
-        verbose_name='Фамилия',
-        blank=True
-    )
-    bio = models.TextField(
-        verbose_name='О себе',
-        null=True,
-        blank=True
-    )
-    role = models.CharField(
-        verbose_name='Роль',
-        max_length=50,
-        choices=ROLES,
-        default=USER
-    )
-    confirmation_code = models.CharField(
-        verbose_name='Код подтверждения',
-        max_length=200,
-        editable=False,
-        null=True,
-        blank=True,
-        unique=True
-    )
+    first_name = models.CharField('Имя', max_length=150, blank=True)
+    last_name = models.CharField('Фамилия', max_length=150, blank=True)
+    bio = models.TextField('О себе', blank=True)
+    role = models.CharField('Роль', max_length=50, choices=ROLES, default=USER)
 
     @property
     def is_moderator(self):

@@ -31,16 +31,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     Сериализатор для модели - User.
     Для регистрации новых пользователей.
     """
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+$',
-        max_length=150,
-        required=True
-    )
-    email = serializers.EmailField(
-        max_length=254,
-        required=True,
-    )
-
     def validate_username(self, value):
         if value.lower() == 'me':
             raise serializers.ValidationError(
