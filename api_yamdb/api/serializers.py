@@ -1,8 +1,4 @@
-import re
-
-from django.utils import timezone
 from rest_framework import serializers
-from rest_framework import filters, mixins, viewsets
 from rest_framework.relations import SlugRelatedField
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
@@ -35,16 +31,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     Сериализатор для модели - User.
     Для регистрации новых пользователей.
     """
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+$',
-        max_length=150,
-        required=True
-    )
-    email = serializers.EmailField(
-        max_length=254,
-        required=True,
-    )
-
     def validate_username(self, value):
         if value.lower() == 'me':
             raise serializers.ValidationError(
@@ -85,8 +71,6 @@ class TitleSerializer(serializers.ModelSerializer):
     """
     Сериалайзел для POST, RATCH и DEL запросов.
     """
-    name = serializers.CharField(required=True, max_length=256)
-    
     genre = SlugRelatedField(
         slug_field='slug', many=True, queryset=Genre.objects.all()
     )
@@ -94,17 +78,19 @@ class TitleSerializer(serializers.ModelSerializer):
         slug_field='slug', queryset=Category.objects.all()
     )
 
-    def validate_name(self, value):
-        if len(value) > 256:
-            raise serializers.ValidationError(
-                'Имя должно быть меньше или равно 256 символам.')
-        return value
-
     class Meta:
         model = Title
         fields = (
             'id', 'name', 'year', 'description', 'genre', 'category'
         )
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        genre = Genre.objects.filter(slug__in=data['genre'])
+        category = Category.objects.get(slug=data['category'])
+        data['genre'] = GenreSerializer(instance=genre, many=True).data
+        data['category'] = CategorySerializer(instance=category).data
+        return data
 
 
 class TitleReadOnlySerializer(serializers.ModelSerializer):
@@ -112,7 +98,7 @@ class TitleReadOnlySerializer(serializers.ModelSerializer):
     Сериалайзел для GET запросов.
     """
     rating = serializers.IntegerField(read_only=True)
-    genre = GenreSerializer(many=True,)
+    genre = GenreSerializer(many=True)
     category = CategorySerializer()
 
     class Meta:

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Genre, Review, Comment, Title, TitleGenre, User
+from .models import Category, Genre, Review, Comment, Title, User
 
 
 @admin.register(Title)
@@ -20,11 +20,6 @@ class CategoryAdmin(admin.ModelAdmin):
 class GenreAdmin(admin.ModelAdmin):
     list_display = ('pk', 'name', 'slug')
     prepopulated_fields = {"slug": ("name",)}
-
-
-@admin.register(TitleGenre)
-class TitleGenreAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'title', 'genre')
 
 
 @admin.register(User)

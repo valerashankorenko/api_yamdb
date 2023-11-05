@@ -7,6 +7,8 @@ from django.core.validators import (MaxValueValidator, MinValueValidator,
 from django.db import models
 from django.db.models import Avg
 
+from api.core import NameSlugModel
+
 LENGTH_TITLE = 20
 
 
@@ -16,51 +18,22 @@ class User(AbstractUser):
     USER = 'user'
 
     ROLES = (
-        (ADMIN, 'Administrator'),
-        (MODERATOR, 'Moderator'),
-        (USER, 'User'),
+        (ADMIN, 'Администратор'),
+        (MODERATOR, 'Модератор'),
+        (USER, 'Пользователь'),
     )
 
-    email = models.EmailField(
-        verbose_name='Адрес электронной почты',
-        max_length=254,
-        unique=True,
-    )
+    email = models.EmailField('E-mail', max_length=254, unique=True,)
     username = models.CharField(
-        verbose_name='Имя пользователя (логин)',
+        'Имя пользователя (логин)',
         max_length=150,
         unique=True,
-        validators=([RegexValidator(regex=r'^[\w.@+-]+$')]),
+        validators=(RegexValidator(regex=r'^[\w.@+-]+$'),),
     )
-    first_name = models.CharField(
-        max_length=150,
-        verbose_name='Имя',
-        blank=True
-    )
-    last_name = models.CharField(
-        max_length=150,
-        verbose_name='Фамилия',
-        blank=True
-    )
-    bio = models.TextField(
-        verbose_name='О себе',
-        null=True,
-        blank=True
-    )
-    role = models.CharField(
-        verbose_name='Роль',
-        max_length=50,
-        choices=ROLES,
-        default=USER
-    )
-    confirmation_code = models.CharField(
-        verbose_name='Код подтверждения',
-        max_length=200,
-        editable=False,
-        null=True,
-        blank=True,
-        unique=True
-    )
+    first_name = models.CharField('Имя', max_length=150, blank=True)
+    last_name = models.CharField('Фамилия', max_length=150, blank=True)
+    bio = models.TextField('О себе', blank=True)
+    role = models.CharField('Роль', max_length=50, choices=ROLES, default=USER)
 
     @property
     def is_moderator(self):
@@ -84,14 +57,6 @@ def validate_year(value):
     if value > datetime.now().year:
         raise ValidationError('Указанный %(value)s  год больше текущего',
                               params={'value': value})
-
-
-class NameSlugModel(models.Model):
-    name = models.CharField('Название', max_length=256)
-    slug = models.SlugField('Слаг', max_length=50, unique=True)
-
-    class Meta:
-        abstract = True
 
 
 class Category(NameSlugModel):
@@ -123,11 +88,10 @@ class Title(models.Model):
     Модель для произведений.
     """
     name = models.CharField('Название произведения', max_length=256)
-    year = models.IntegerField('Год выхода произведения',
-                               validators=[validate_year])
-    description = models.TextField('Описание')
-    genre = models.ManyToManyField(Genre, through='TitleGenre',
-                                   verbose_name='Жанр')
+    year = models.PositiveSmallIntegerField('Год выхода произведения',
+                                            validators=(validate_year,))
+    description = models.TextField('Описание', blank=True)
+    genre = models.ManyToManyField(Genre, verbose_name='Жанр')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,
                                  related_name='titles', null=True,
                                  verbose_name='Категория')
@@ -138,20 +102,6 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name
-
-
-class TitleGenre(models.Model):
-    title = models.ForeignKey(Title, on_delete=models.CASCADE,
-                              verbose_name='Название произведения')
-    genre = models.ForeignKey(Genre, on_delete=models.CASCADE,
-                              verbose_name='Жанр')
-
-    class Meta:
-        verbose_name = 'Произведение-Жанр'
-        verbose_name_plural = 'Произведения-Жанры'
-
-    def __str__(self):
-        return f'{self.title} - {self.genre}'
 
 
 class Review(models.Model):
