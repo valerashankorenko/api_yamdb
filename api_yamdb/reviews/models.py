@@ -1,4 +1,4 @@
-from datetime import datetime
+from django.utils import timezone
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -54,8 +54,11 @@ class User(AbstractUser):
 
 
 def validate_year(value):
-    if value > datetime.now().year:
+    if value > timezone.now().year:
         raise ValidationError('Указанный %(value)s  год больше текущего',
+                              params={'value': value})
+    if value < 0:
+        raise ValidationError('Указанный %(value)s  год до нашей эры',
                               params={'value': value})
 
 

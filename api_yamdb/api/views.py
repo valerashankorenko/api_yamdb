@@ -6,7 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from .filters import TitleFilter
-from .mixins import (GetTokenMixin, ListCreatDestroyViewSet,
+from .mixins import (GetTokenMixin, ListCreatDestroyMixin,
                      UserModelMixin, UserRegisterMixin)
 from .permissions import IsAdmin, IsOwner, IsAdminOrReadOnly
 from .serializers import (CategorySerializer, CommentSerializer,
@@ -44,7 +44,8 @@ class GetTokenViewSet(GetTokenMixin, viewsets.GenericViewSet):
     permission_classes = (permissions.AllowAny,)
 
 
-class CategoryViewSet(ListCreatDestroyViewSet):
+class CategoryViewSet(ListCreatDestroyMixin,
+                      viewsets.GenericViewSet):
     """
     Вьюсет для Category.
     """
@@ -57,7 +58,8 @@ class CategoryViewSet(ListCreatDestroyViewSet):
     lookup_field = 'slug'
 
 
-class GenreViewSet(ListCreatDestroyViewSet):
+class GenreViewSet(ListCreatDestroyMixin,
+                   viewsets.GenericViewSet):
     """
     Вьюсет для Genre.
     """

@@ -2,7 +2,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.decorators import action
-from rest_framework import mixins, viewsets
+from rest_framework import mixins
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -42,10 +42,12 @@ class GetTokenMixin(mixins.CreateModelMixin):
         )
 
 
-class ListCreatDestroyViewSet(mixins.ListModelMixin,
-                              mixins.CreateModelMixin,
-                              mixins.DestroyModelMixin,
-                              viewsets.GenericViewSet,):
+class ListCreatDestroyMixin(mixins.ListModelMixin,
+                            mixins.CreateModelMixin,
+                            mixins.DestroyModelMixin):
+    """
+    Миксин для работы с моделями Category и Genre.
+    """
     pass
 
 
