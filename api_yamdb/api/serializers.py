@@ -8,8 +8,10 @@ class TokenSerializer(serializers.ModelSerializer):
     """
     Сериализатор для токена.
     """
-    username = serializers.CharField(required=True)
-    confirmation_code = serializers.CharField(required=True)
+    username = serializers.CharField(
+        required=True)
+    confirmation_code = serializers.CharField(
+        required=True)
 
     class Meta:
         model = User
@@ -69,15 +71,36 @@ class GenreSerializer(serializers.ModelSerializer):
         lookup_url_kwarg = 'slug'
 
 
+class TitleReadOnlySerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для GET запросов.
+    """
+    rating = serializers.IntegerField(
+        read_only=True)
+    genre = GenreSerializer(many=True)
+    category = CategorySerializer()
+
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
+
+
 class TitleSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для POST, RATCH и DEL запросов.
+    Сериализатор для POST, PATCH и DELETE запросов.
     """
     genre = SlugRelatedField(
-        slug_field='slug', many=True, queryset=Genre.objects.all()
+        slug_field='slug',
+        many=True,
+        queryset=Genre.objects.all(),
+        allow_null=False,
+        required=True
     )
     category = SlugRelatedField(
-        slug_field='slug', queryset=Category.objects.all()
+        slug_field='slug',
+        queryset=Category.objects.all()
     )
 
     class Meta:
@@ -87,27 +110,7 @@ class TitleSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        genre = Genre.objects.filter(slug__in=data['genre'])
-        category = Category.objects.get(slug=data['category'])
-        data['genre'] = GenreSerializer(instance=genre, many=True).data
-        data['category'] = CategorySerializer(instance=category).data
-        return data
-
-
-class TitleReadOnlySerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для GET запросов.
-    """
-    rating = serializers.IntegerField(read_only=True)
-    genre = GenreSerializer(many=True)
-    category = CategorySerializer()
-
-    class Meta:
-        model = Title
-        fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
-        )
+        return TitleReadOnlySerializer(instance).data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -128,10 +131,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         """
         Метод проверяет отзыв на дубликат.
         """
-        existing_review = Review.objects.filter(
-            title=validated_data['title'], author=self.context['request'].user
-        ).exists()
-        if existing_review:
+        if Review.objects.filter(
+            title=validated_data['title'],
+            author=self.context['request'].user
+        ).exists():
             raise serializers.ValidationError(
                 'На одно произведение пользователь'
                 'может оставить только один отзыв'

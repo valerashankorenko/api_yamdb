@@ -1,22 +1,22 @@
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
+
 from .filters import TitleFilter
-from .mixins import (GetTokenMixin, TitleMixin,
-                     UserModelMixin, UserRegisterMixin)
-from .permissions import (IsAdminOrReadOnly,
-                          IsAuthenticatedAdmin,
+from .mixins import (CategoryGenreMixin, GetTokenMixin, UserModelMixin,
+                     UserRegisterMixin)
+from .permissions import (IsAdminOrReadOnly, IsAuthenticatedAdmin,
                           IsModeratorOrAdminOrAuthor)
-from .serializers import (
-    CategorySerializer, CommentSerializer, GenreSerializer, ReviewSerializer,
-    TitleReadOnlySerializer, TitleSerializer, TokenSerializer,
-    UserRegisterSerializer, UserSerializer
-)
+from .serializers import (CategorySerializer, CommentSerializer,
+                          GenreSerializer, ReviewSerializer,
+                          TitleReadOnlySerializer, TitleSerializer,
+                          TokenSerializer, UserRegisterSerializer,
+                          UserSerializer)
 
 
 class UserViewSet(UserModelMixin,
@@ -51,7 +51,7 @@ class GetTokenViewSet(GetTokenMixin,
     permission_classes = (permissions.AllowAny,)
 
 
-class CategoryViewSet(TitleMixin,
+class CategoryViewSet(CategoryGenreMixin,
                       viewsets.GenericViewSet):
     """
     Вьюсет для Category.
@@ -65,7 +65,7 @@ class CategoryViewSet(TitleMixin,
     lookup_field = 'slug'
 
 
-class GenreViewSet(TitleMixin,
+class GenreViewSet(CategoryGenreMixin,
                    viewsets.GenericViewSet):
     """
     Вьюсет для Genre.
@@ -89,7 +89,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     ).order_by('name')
     permission_classes = (IsAdminOrReadOnly,)
     pagination_class = PageNumberPagination
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    http_method_names = ('get', 'post', 'patch', 'delete')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
 
@@ -113,36 +113,44 @@ class ReviewViewSet(viewsets.ModelViewSet):
     """
     queryset = Review.objects.order_by('id')
     serializer_class = ReviewSerializer
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    http_method_names = ('get', 'post', 'patch', 'delete')
     permission_classes = (IsModeratorOrAdminOrAuthor,)
     lookup_field = 'pk'
     lookup_url_kwarg = 'review_id'
+
+    def get_title(self):
+        """
+        Метод возвращает объект Title, соответствующий title_id из URL.
+        Вызывает 404 ошибку, если объект не найден.
+        """
+        return get_object_or_404(Title, id=self.kwargs.get('title_id'))
 
     def get_queryset(self):
         """
         Метод возвращает queryset отзывов, отфильтрованных по
         id произведения и отсортированных по id отзывов.
         """
-        title_id = self.kwargs.get('title_id')
-        return Review.objects.filter(title_id=title_id).order_by('id')
+        return self.queryset.filter(title_id=self.get_title())
 
     def perform_create(self, serializer):
         """
         Метод устанавливает автора при создании отзыва.
         """
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=self.get_title())
 
     def get_object(self):
         """
         Метод возвращает отдельный отзыв, связанный
         с произведением, указанным в параметрах запроса.
         """
-        title_id = self.kwargs.get('title_id')
-        review_id = self.kwargs.get('review_id')
-        queryset = self.get_queryset()
-        obj = get_object_or_404(queryset, id=review_id, title_id=title_id)
+        obj = get_object_or_404(
+            self.get_queryset(),
+            id=self.kwargs.get('review_id'),
+            title_id=self.kwargs.get('title_id'))
+
+        if obj.title_id != self.get_title().id:
+            raise PermissionDenied('Несоответствие title_id и review_id')
+
         self.check_object_permissions(self.request, obj)
         return obj
 
@@ -158,7 +166,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     """
     queryset = Comment.objects.order_by('id')
     serializer_class = CommentSerializer
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    http_method_names = ('get', 'post', 'patch', 'delete')
     permission_classes = (IsModeratorOrAdminOrAuthor,)
     lookup_field = 'pk'
     lookup_url_kwarg = 'comment_id'
@@ -167,6 +175,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         """
         Метод устанавливает автора при создании комментария.
         """
-        review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, id=review_id)
+        review = get_object_or_404(
+            Review, id=self.kwargs.get('review_id'))
         serializer.save(author=self.request.user, review=review)
