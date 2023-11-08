@@ -67,32 +67,6 @@ class GenreSerializer(serializers.ModelSerializer):
         lookup_url_kwarg = 'slug'
 
 
-class TitleSerializer(serializers.ModelSerializer):
-    """
-    Сериалайзел для POST, RATCH и DEL запросов.
-    """
-    genre = SlugRelatedField(
-        slug_field='slug', many=True, queryset=Genre.objects.all()
-    )
-    category = SlugRelatedField(
-        slug_field='slug', queryset=Category.objects.all()
-    )
-
-    class Meta:
-        model = Title
-        fields = (
-            'id', 'name', 'year', 'description', 'genre', 'category'
-        )
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        genre = Genre.objects.filter(slug__in=data['genre'])
-        category = Category.objects.get(slug=data['category'])
-        data['genre'] = GenreSerializer(instance=genre, many=True).data
-        data['category'] = CategorySerializer(instance=category).data
-        return data
-
-
 class TitleReadOnlySerializer(serializers.ModelSerializer):
     """
     Сериалайзел для GET запросов.
@@ -106,6 +80,27 @@ class TitleReadOnlySerializer(serializers.ModelSerializer):
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
+
+
+class TitleSerializer(serializers.ModelSerializer):
+    """
+    Сериалайзел для POST, RATCH и DEL запросов.
+    """
+    genre = SlugRelatedField(
+        slug_field='slug', many=True, queryset=Genre.objects.all(),
+    )
+    category = SlugRelatedField(
+        slug_field='slug', queryset=Category.objects.all()
+    )
+
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'description', 'genre', 'category'
+        )
+
+    def to_representation(self, instance):
+        return TitleReadOnlySerializer(instance).data
 
 
 class CommentSerializer(serializers.ModelSerializer):
