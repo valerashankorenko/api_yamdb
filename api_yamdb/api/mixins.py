@@ -128,10 +128,12 @@ class UserModelMixin(CreateModelMixin, ListModelMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class TitleMixin(ListModelMixin,
-                 CreateModelMixin,
-                 DestroyModelMixin):
+class CategoryGenreMixin(
+    ListModelMixin,
+    CreateModelMixin,
+    DestroyModelMixin
+):
     """
-    Миксин для работы с моделью - Title.
+    Миксин для работы с моделями - Category и Genre.
     """
     pass

@@ -1,4 +1,4 @@
-from datetime import datetime
+from django.utils import timezone
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -15,13 +15,11 @@ class User(AbstractUser):
     ADMIN = 'admin'
     MODERATOR = 'moderator'
     USER = 'user'
-    SUPERUSER = 'superuser'
 
     ROLES = (
         (ADMIN, 'Администратор'),
         (MODERATOR, 'Модератор'),
         (USER, 'Пользователь'),
-        (SUPERUSER, 'Суперпользователь'),
     )
 
     email = models.EmailField(
@@ -57,7 +55,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == self.ADMIN or self.role == self.SUPERUSER
+        return self.role == self.ADMIN or self.is_superuser
 
     @property
     def is_user(self):
@@ -70,11 +68,11 @@ class User(AbstractUser):
 
 
 def validate_year(value):
-    """
-    Метод для проверки года произведения.
-    """
-    if value > datetime.now().year:
+    if value > timezone.now().year:
         raise ValidationError('Указанный %(value)s  год больше текущего',
+                              params={'value': value})
+    if value < 0:
+        raise ValidationError('Указанный %(value)s  год до нашей эры',
                               params={'value': value})
 
 
