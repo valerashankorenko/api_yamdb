@@ -99,6 +99,13 @@ class TitleSerializer(serializers.ModelSerializer):
             'id', 'name', 'year', 'description', 'genre', 'category'
         )
 
+    def validate_genre(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                'Создать произведение без жанра невозможно'
+            )
+        return value
+
     def to_representation(self, instance):
         return TitleReadOnlySerializer(instance).data
 
