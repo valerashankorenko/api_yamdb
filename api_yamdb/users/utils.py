@@ -14,7 +14,6 @@ def send_confirmation_code(request):
         username=request.data.get('username'),
     )
     confirmation_code = default_token_generator.make_token(user)
-    user.save()
     send_mail(
         subject='YaMDb registration',
         message=f'Ваш код подтверждения: {confirmation_code}',
